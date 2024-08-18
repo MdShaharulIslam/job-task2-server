@@ -9,7 +9,9 @@ const port = process.env.PORT || 5000;
 // Middleware
 app.use(
   cors({
-    origin: ['https://job-task2-client.web.app'],
+    origin: 'https://job-task2-client.web.app', // Allow this origin
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Specify allowed methods
+    allowedHeaders: ['Content-Type', 'Authorization'], // Specify allowed headers
     optionsSuccessStatus: 200,
   })
 );
@@ -17,7 +19,6 @@ app.use(express.json());
 
 const uri = process.env.DB_url;
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -101,7 +102,7 @@ app.get("/", (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Server is running on ${port}`);
+  console.log(`Server is running on port ${port}`);
 });
 
 // Close the MongoDB connection when the Node.js process is terminated
