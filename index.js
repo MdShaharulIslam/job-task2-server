@@ -7,6 +7,13 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // Middleware
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "https://job-task2-client.web.app");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  next();
+});
+
 app.use(cors({
   origin: ['http://localhost:5173', 'https://job-task2-client.web.app'], // Correctly formatted array of origins
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
