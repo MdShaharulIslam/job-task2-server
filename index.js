@@ -3,21 +3,17 @@ const cors = require("cors");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 require("dotenv").config();
 
-
 const app = express();
 const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173","https://job-task2-client.web.app"],
-    
+    origin: ["http://localhost:5173", "https://job-task2-client.web.app"],
+    optionsSuccessStatus: 200,
   })
 );
 app.use(express.json());
-
-
-
 
 const uri = process.env.DB_url;
 
@@ -27,18 +23,16 @@ const client = new MongoClient(uri, {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  }
+  },
 });
 
 async function run() {
   try {
+    await client.connect(); // Ensure the MongoClient is connected before making any requests
 
-    const productCollection = client.db('Products').collection('product')
+    const productCollection = client.db("Products").collection("product");
 
-
-
-    
-    app.get('/product', async (req, res) => {
+    app.get("/product", async (req, res) => {
       const page = parseInt(req.query.page) || 1;
       const search = req.query.search || "";
       const sortValue = req.query.sort || "";
@@ -47,67 +41,72 @@ async function run() {
       const minimum = parseFloat(req.query.minimum) || 0;
       const maximum = parseFloat(req.query.maximum) || Number.MAX_VALUE;
       const limit = 11;
-    
+
       const query = {};
-    
+
       if (search) {
         query.productName = { $regex: search, $options: "i" };
       }
-    
+
       if (brand) {
         query.brand = { $regex: brand, $options: "i" };
       }
-    
+
       if (category) {
         query.category = { $regex: category, $options: "i" };
       }
-    
+
       if (!isNaN(minimum) || !isNaN(maximum)) {
         query.price = {
           $gte: minimum,
-          $lte: maximum
+          $lte: maximum,
         };
       }
-    
-      let sort = { createdAt: -1 }; 
-      if (sortValue === 'Low to High') {
+
+      let sort = { createdAt: -1 };
+      if (sortValue === "Low to High") {
         sort = { price: 1, createdAt: -1 };
-      } else if (sortValue === 'High to Low') {
+      } else if (sortValue === "High to Low") {
         sort = { price: -1, createdAt: -1 };
       }
-    
-     
+
       const skip = (page - 1) * limit;
-      const result = await productCollection.find(query).sort(sort).skip(skip).limit(limit).toArray();
+      const result = await productCollection
+        .find(query)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .toArray();
       const totalProducts = await productCollection.countDocuments(query);
-    
+
       res.send({
         data: result,
         currentPage: page,
         totalPages: Math.ceil(totalProducts / limit),
-        totalProducts
+        totalProducts,
       });
     });
-    
 
-
-
-
-
-
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } finally {
-
+    console.log("Successfully connected to MongoDB!");
+  } catch (error) {
+    console.error("Failed to connect to MongoDB", error);
+    process.exit(1); // Exit the process with a failure code
   }
 }
+
 run().catch(console.dir);
 
-
-
 app.get("/", (req, res) => {
-    res.send("server is running");
-  });
-  
-  app.listen(port, () => {
-    console.log(`server is running on ${port}`);
-  });
+  res.send("Server is running");
+});
+
+app.listen(port, () => {
+  console.log(`Server is running on ${port}`);
+});
+
+// Close the MongoDB connection when the Node.js process is terminated
+process.on("SIGINT", async () => {
+  await client.close();
+  console.log("MongoDB connection closed");
+  process.exit(0);
+});
