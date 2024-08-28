@@ -5,20 +5,16 @@ require("dotenv").config();
 
 const app = express();
 const port = process.env.PORT || 5000;
-app.use(cors());
-// Middleware
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://job-task2-client.web.app");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-  next();
-});
 
+// CORS Configuration
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://job-task2-client.web.app'], // Correctly formatted array of origins
+  origin: ['http://localhost:5173', 'https://job-task2-client.web.app'], // Allow specified origins
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  credentials: true
+  credentials: true,
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
 }));
+
+// Middleware to parse JSON
 app.use(express.json());
 
 const uri = process.env.DB_url;
@@ -60,7 +56,7 @@ async function run() {
         query.category = { $regex: category, $options: "i" };
       }
 
-      if (!isNaN(minimum) || !isNaN(maximum)) {
+      if (!isNaN(minimum) && !isNaN(maximum)) {
         query.price = {
           $gte: minimum,
           $lte: maximum
@@ -73,6 +69,7 @@ async function run() {
       } else if (sortValue === 'High to Low') {
         sort = { price: -1, createdAt: -1 };
       }
+
       const skip = (page - 1) * limit;
       const result = await productCollection.find(query).sort(sort).skip(skip).limit(limit).toArray();
       const totalProducts = await productCollection.countDocuments(query);
@@ -90,6 +87,7 @@ async function run() {
     // Optionally, close the client connection here
   }
 }
+
 run().catch(console.dir);
 
 app.get("/", (req, res) => {
