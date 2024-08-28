@@ -5,7 +5,7 @@ require("dotenv").config();
 
 const app = express();
 const port = process.env.PORT || 5000;
-
+app.use(cors());
 // Middleware
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "https://job-task2-client.web.app");
