@@ -6,16 +6,9 @@ require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
 
-// CORS Configuration
-app.use(cors({
-  origin: ['http://localhost:5173', 'https://job-task2-client.web.app'], // Allow specified origins
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  credentials: true,
-  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
-}));
-
-// Middleware to parse JSON
+// Middleware
 app.use(express.json());
+app.use(cors());
 
 const uri = process.env.DB_url;
 
@@ -30,61 +23,76 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    const productCollection = client.db('Products').collection('product');
+    const productCollection = client.db('Weprod').collection('product');
 
+    // All products route
     app.get('/product', async (req, res) => {
-      const page = parseInt(req.query.page) || 1;
-      const search = req.query.search || "";
-      const sortValue = req.query.sort || "";
-      const brand = req.query.brand || "";
-      const category = req.query.category || "";
-      const minimum = parseFloat(req.query.minimum) || 0;
-      const maximum = parseFloat(req.query.maximum) || Number.MAX_VALUE;
-      const limit = 11;
+      try {
+        const page = parseInt(req.query.page) || 1;
+        const search = req.query.search || "";
+        const sortValue = req.query.sort || "";
+        const brand = req.query.brand || "";
+        const category = req.query.category || "";
+        const minimum = parseFloat(req.query.minimum) || 0;
+        const maximum = parseFloat(req.query.maximum) || Number.MAX_VALUE;
 
-      const query = {};
+        // Limit for page
+        const limit = 11;
 
-      if (search) {
-        query.productName = { $regex: search, $options: "i" };
+        // Query for finding products
+        const query = {};
+
+        // Check query value with condition
+        if (search) {
+          query.productName = { $regex: search, $options: "i" };
+        }
+        if (brand) {
+          query.brand = { $regex: brand, $options: "i" };
+        }
+        if (category) {
+          query.category = { $regex: category, $options: "i" };
+        }
+        if (!isNaN(minimum) || !isNaN(maximum)) {
+          query.price = {
+            $gte: minimum,
+            $lte: maximum
+          };
+        }
+
+        // Sorting value
+        let sort = { createdAt: -1 };
+
+        // Check sorting value with condition
+        if (sortValue === 'Low to High') {
+          sort = { price: 1 };
+        } else if (sortValue === 'High to Low') {
+          sort = { price: -1 };
+        } else if (sortValue === 'Newest first') {
+          sort = { createdAt: -1 };
+        }
+
+        // Variable for skip
+        const skip = (page - 1) * limit;
+        const result = await productCollection.find(query).sort(sort).skip(skip).limit(limit).toArray();
+
+        // Total product length for pagination
+        const totalProducts = await productCollection.countDocuments(query);
+
+        res.send({
+          data: result,
+          currentPage: page,
+          totalPages: Math.ceil(totalProducts / limit),
+          totalProducts
+        });
+      } catch (error) {
+        console.error("Error in /product route:", error);
+        res.status(500).send("Internal Server Error");
       }
-
-      if (brand) {
-        query.brand = { $regex: brand, $options: "i" };
-      }
-
-      if (category) {
-        query.category = { $regex: category, $options: "i" };
-      }
-
-      if (!isNaN(minimum) && !isNaN(maximum)) {
-        query.price = {
-          $gte: minimum,
-          $lte: maximum
-        };
-      }
-
-      let sort = { createdAt: -1 };
-      if (sortValue === 'Low to High') {
-        sort = { price: 1, createdAt: -1 };
-      } else if (sortValue === 'High to Low') {
-        sort = { price: -1, createdAt: -1 };
-      }
-
-      const skip = (page - 1) * limit;
-      const result = await productCollection.find(query).sort(sort).skip(skip).limit(limit).toArray();
-      const totalProducts = await productCollection.countDocuments(query);
-
-      res.send({
-        data: result,
-        currentPage: page,
-        totalPages: Math.ceil(totalProducts / limit),
-        totalProducts
-      });
     });
 
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } finally {
-    // Optionally, close the client connection here
+  } catch (error) {
+    console.error("Error during run:", error);
   }
 }
 
