@@ -8,7 +8,14 @@ const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(express.json());
-app.use(cors());
+
+// Configure CORS to allow your client origin
+const corsOptions = {
+  origin: ['https://job-task2-client.web.app', 'http://localhost:5173'],
+  optionsSuccessStatus: 200, // For legacy browser support
+  credentials: true // Enable cookies and other credentials
+};
+app.use(cors(corsOptions));
 
 const uri = process.env.DB_url;
 
